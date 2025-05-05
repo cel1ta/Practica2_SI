@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <title>Dashboard - Cuadro de Mando Integral</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Incluir Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        canvas {
+            max-width: 600px;
+            margin: 20px 0;
+        }
+    </style>
 </head>
 <body>
 <h1>Cuadro de Mando Integral</h1>
@@ -17,47 +25,14 @@
 </form>
 
 <h2>Top {{ top_x }} Clientes con Más Incidencias</h2>
-<table border="1">
-    <tr>
-        <th>ID Cliente</th>
-        <th>Número de Incidencias</th>
-    </tr>
-    {% for client in top_clients %}
-    <tr>
-        <td>{{ client['cliente'] }}</td>
-        <td>{{ client['incident_count'] }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<canvas id="clientsChart"></canvas>
 
 <h2>Top {{ top_x }} Tipos de Incidencias por Tiempo de Resolución</h2>
-<table border="1">
-    <tr>
-        <th>Tipo de Incidencia</th>
-        <th>Tiempo Promedio de Resolución (Días)</th>
-    </tr>
-    {% for incident in top_incident_types %}
-    <tr>
-        <td>{{ incident['tipo_incidencia'] }}</td>
-        <td>{{ incident['avg_resolution_days'] | round(2) }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<canvas id="incidentTypesChart"></canvas>
 
 {% if show_employees and top_employees %}
 <h2>Top {{ top_x }} Empleados por Tiempo Empleado</h2>
-<table border="1">
-    <tr>
-        <th>ID Empleado</th>
-        <th>Tiempo Total (Horas)</th>
-    </tr>
-    {% for employee in top_employees %}
-    <tr>
-        <td>{{ employee['id_emp'] }}</td>
-        <td>{{ employee['total_time'] | round(2) }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<canvas id="employeesChart"></canvas>
 {% endif %}
 
 <h2>Últimas 10 Vulnerabilidades (Tiempo Real)</h2>
@@ -83,5 +58,129 @@
 {% else %}
 <p>No se pudieron obtener vulnerabilidades en este momento.</p>
 {% endif %}
+
+<script>
+    // Datos para el gráfico de barras (Top Clientes)
+    const clientsData = {
+        labels: [{% for client in top_clients %}'{{ client['cliente'] }}'{% if not loop.last %},{% endif %}{% endfor %}],
+    datasets: [{
+        label: 'Número de Incidencias',
+        data: [{% for client in top_clients %}{{ client['incident_count'] }}{% if not loop.last %},{% endif %}{% endfor %}],
+    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+    }]
+    };
+
+    // Configuración del gráfico de barras (Clientes)
+    const clientsChart = new Chart(document.getElementById('clientsChart'), {
+        type: 'bar',
+        data: clientsData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Número de Incidencias'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'ID Cliente'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+
+    // Datos para el gráfico de líneas (Top Tipos de Incidencias)
+    const incidentTypesData = {
+        labels: [{% for incident in top_incident_types %}'{{ incident['tipo_incidencia'] }}'{% if not loop.last %},{% endif %}{% endfor %}],
+    datasets: [{
+        label: 'Tiempo Promedio de Resolución (Días)',
+        data: [{% for incident in top_incident_types %}{{ incident['avg_resolution_days'] | round(2) }}{% if not loop.last %},{% endif %}{% endfor %}],
+    fill: false,
+        borderColor: 'rgba(255, 99, 132, 1)',
+        tension: 0.1
+    }]
+    };
+
+    // Configuración del gráfico de líneas (Tipos de Incidencias)
+    const incidentTypesChart = new Chart(document.getElementById('incidentTypesChart'), {
+        type: 'line',
+        data: incidentTypesData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Tiempo Promedio (Días)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Tipo de Incidencia'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+
+    // Datos para el gráfico de barras (Top Empleados)
+    {% if show_employees and top_employees %}
+    const employeesData = {
+        labels: [{% for employee in top_employees %}'{{ employee['id_emp'] }}'{% if not loop.last %},{% endif %}{% endfor %}],
+    datasets: [{
+        label: 'Tiempo Total (Horas)',
+        data: [{% for employee in top_employees %}{{ employee['total_time'] | round(2) }}{% if not loop.last %},{% endif %}{% endfor %}],
+    backgroundColor: 'rgba(75, 192, 192, 0.6)',
+        borderColor: 'rgba(75, 192, 192, 1)',
+        borderWidth: 1
+    }]
+    };
+
+    // Configuración del gráfico de barras (Empleados)
+    const employeesChart = new Chart(document.getElementById('employeesChart'), {
+        type: 'bar',
+        data: employeesData,
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Tiempo Total (Horas)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'ID Empleado'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
 </body>
 </html>
