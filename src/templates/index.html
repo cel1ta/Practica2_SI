@@ -59,6 +59,44 @@
 <p>No se pudieron obtener vulnerabilidades en este momento.</p>
 {% endif %}
 
+<h2>Últimos malwares detectados</h2>
+
+{% if latest_malware %}
+  <table class="table-auto w-full border-collapse">
+    <thead>
+      <tr class="bg-gray-200">
+        <th class="px-4 py-2 border">SHA256</th>
+        <th class="px-4 py-2 border">Nombre de Archivo</th>
+        <th class="px-4 py-2 border">Tipo de Archivo</th>
+        <th class="px-4 py-2 border">Firma</th>
+        <th class="px-4 py-2 border">Etiquetas</th>
+        <th class="px-4 py-2 border">Primera Detección</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for last in latest_malware %}
+        <tr class="hover:bg-gray-100">
+          <td class="px-4 py-2 border breaking-all">{{ last.sha256 }}</td>
+          <td class="px-4 py-2 border">{{ last.file_name }}</td>
+          <td class="px-4 py-2 border">{{ last.file_type }}</td>
+          <td class="px-4 py-2 border">{{ last.signature }}</td>
+          <td class="px-4 py-2 border">
+            {% if last.tags %}
+              {{ last.tags | join(', ') }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="px-4 py-2 border">{{ last.first_seen[:10] }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>No se pudieron obtener malwares en este momento.</p>
+{% endif %}
+
+
 <script>
     // Datos para el gráfico de barras (Top Clientes)
     const clientsData = {
