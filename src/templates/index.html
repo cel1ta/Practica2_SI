@@ -22,6 +22,9 @@
     <label for="show_employees">Mostrar empleados:</label>
     <input type="checkbox" id="show_employees" name="show_employees" {% if show_employees %}checked{% endif %}>
     <button type="submit">Actualizar</button>
+    <button type="submit" name="generate_pdf" class="btn btn-primary">
+        Descargar Informe PDF
+    </button>
 </form>
 
 <h2>Top {{ top_x }} Clientes con Más Incidencias</h2>
@@ -62,38 +65,38 @@
 <h2>Últimos malwares detectados</h2>
 
 {% if latest_malware %}
-  <table class="table-auto w-full border-collapse">
+<table class="table-auto w-full border-collapse">
     <thead>
-      <tr class="bg-gray-200">
+    <tr class="bg-gray-200">
         <th class="px-4 py-2 border">SHA256</th>
         <th class="px-4 py-2 border">Nombre de Archivo</th>
         <th class="px-4 py-2 border">Tipo de Archivo</th>
         <th class="px-4 py-2 border">Firma</th>
         <th class="px-4 py-2 border">Etiquetas</th>
         <th class="px-4 py-2 border">Primera Detección</th>
-      </tr>
+    </tr>
     </thead>
     <tbody>
-      {% for last in latest_malware %}
-        <tr class="hover:bg-gray-100">
-          <td class="px-4 py-2 border breaking-all">{{ last.sha256 }}</td>
-          <td class="px-4 py-2 border">{{ last.file_name }}</td>
-          <td class="px-4 py-2 border">{{ last.file_type }}</td>
-          <td class="px-4 py-2 border">{{ last.signature }}</td>
-          <td class="px-4 py-2 border">
+    {% for last in latest_malware %}
+    <tr class="hover:bg-gray-100">
+        <td class="px-4 py-2 border breaking-all">{{ last.sha256 }}</td>
+        <td class="px-4 py-2 border">{{ last.file_name }}</td>
+        <td class="px-4 py-2 border">{{ last.file_type }}</td>
+        <td class="px-4 py-2 border">{{ last.signature }}</td>
+        <td class="px-4 py-2 border">
             {% if last.tags %}
-              {{ last.tags | join(', ') }}
+            {{ last.tags | join(', ') }}
             {% else %}
-              —
+            —
             {% endif %}
-          </td>
-          <td class="px-4 py-2 border">{{ last.first_seen[:10] }}</td>
-        </tr>
-      {% endfor %}
+        </td>
+        <td class="px-4 py-2 border">{{ last.first_seen[:10] }}</td>
+    </tr>
+    {% endfor %}
     </tbody>
-  </table>
+</table>
 {% else %}
-  <p>No se pudieron obtener malwares en este momento.</p>
+<p>No se pudieron obtener malwares en este momento.</p>
 {% endif %}
 
 
