@@ -1,8 +1,31 @@
-from flask import Flask, render_template, request
-import sqlite3
 import requests
+from flask import Flask, render_template, request, make_response, send_file
+import sqlite3
+from requests import get, RequestException
+from fpdf import FPDF
+import io
 
 app = Flask(__name__)
+
+class PDF(FPDF):
+    def header(self):
+        # Arial bold 15
+        self.set_font('Arial', 'B', 15)
+        # Move to the right
+        self.cell(80)
+        # Title
+        self.cell(30, 10, 'Informe del Cuadro de Mando Integral', 0, 0, 'C')
+        # Line break
+        self.ln(20)
+
+    # Page footer
+    def footer(self):
+        # Position at 1.5 cm from bottom
+        self.set_y(-15)
+        # Arial italic 8
+        self.set_font('Arial', 'I', 8)
+        # Page number
+        self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
 
 def get_db_connection():
     conn = sqlite3.connect('../dataBase.db')
@@ -33,7 +56,7 @@ def get_malware(page=1, page_size=2):
 def get_latest_cves():
     try:
         # Solicitud a la API de cve.circl.lu
-        response = requests.get('https://cve.circl.lu/api/last', timeout=5)
+        response = get('https://cve.circl.lu/api/last', timeout=5)
         response.raise_for_status()  # lanza excepción si la solicitud falla
         cves = response.json()
 
@@ -77,7 +100,7 @@ def get_latest_cves():
             })
 
         return vulnerabilities
-    except requests.RequestException as e:
+    except RequestException as e:
         print(f"Error al consultar la API: {e}")
         return []  #  lista vacía en caso de error
 
@@ -127,6 +150,82 @@ def index():
     # Ultimas dos noticias de ciberseguridad
     latest_malware = get_malware()
 
+    if 'generate_pdf' in request.form:
+        # Crear PDF
+        # Instantiation of inherited class
+        pdf = PDF()
+        pdf.add_page()
+        pdf.set_font('Arial', '', 12)
+
+        # Sección Clientes
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, f'Top {top_x} Clientes', 0, 1)
+        pdf.set_font('Arial', '', 12)
+        for client in top_clients:
+            pdf.cell(0, 8, f"-ID cliente: {client['cliente']}: {client['incident_count']} incidencias", 0, 1)
+        pdf.ln(5)
+
+        # Sección Tipos de Incidencia
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, f'Top {top_x} Tipos de Incidencia', 0, 1)
+        pdf.set_font('Arial', '', 12)
+        for incident in top_incident_types:
+            pdf.cell(0, 8, f"- ID de incidente:{incident['tipo_incidencia']}: {incident['avg_resolution_days']:.2f} días promedio", 0, 1)
+        pdf.ln(5)
+
+        # Sección Empleados (si está activada)
+        if show_employees and top_employees:
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, f'Top {top_x} Empleados', 0, 1)
+            pdf.set_font('Arial', '', 12)
+            for emp in top_employees:
+                pdf.cell(0, 8, f"- Empleado {emp['id_emp']}: {emp['total_time']} horas totales", 0, 1)
+            pdf.ln(5)
+
+        # Sección Vulnerabilidades
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, 'Últimas Vulnerabilidades', 0, 1)
+        pdf.set_font('Arial', '', 10)
+        for cve in latest_cves:
+            text = f"- {cve['cve_id']} ({cve['published_date']}) - Score: {cve['cve_score']}\nDescription: {cve['description']}"
+            sanitized_text = text.encode('latin-1', 'replace').decode('latin-1')
+            pdf.multi_cell(0, 6, sanitized_text)
+            pdf.ln(3)
+
+
+        if latest_malware:  # Solo si hay datos
+            pdf.set_font('Arial', 'B', 14)
+            pdf.cell(0, 10, 'Últimas Amenazas de Malware', 0, 1)
+            pdf.set_font('Arial', '', 10)
+
+            for malware in latest_malware:
+                # Formatear los datos
+                texto = (
+                    f"SHA256: {malware['sha256']}\n"
+                    f"Nombre: {malware['file_name']}\n"
+                    f"Tipo: {malware['file_type']} | "
+                    f"Primera detección: {malware['first_seen']}\n"
+                    f"Firma: {malware['signature']}\n"
+                    f"Etiquetas: {malware['tags']}"
+                )
+
+                # Sanitizar texto si es necesario
+                texto_safe = texto.encode('latin-1', 'replace').decode('latin-1')
+
+                pdf.multi_cell(0, 6, texto_safe)
+                pdf.ln(3)  # Espacio entre muestras
+
+        pdf_bytes = pdf.output(dest='S').encode('latin-1')
+        buf = io.BytesIO(pdf_bytes)
+        buf.seek(0)
+
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name='reporte.pdf',
+            mimetype='application/pdf'
+        )
+
     return render_template('index.html',
                            top_clients=top_clients,
                            top_incident_types=top_incident_types,
@@ -137,5 +236,4 @@ def index():
                            show_employees=show_employees)
 
 if __name__ == '__main__':
-    csirt_news = get_csirt_news()
     app.run(debug=True)
