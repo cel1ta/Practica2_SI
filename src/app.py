@@ -9,6 +9,27 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_malware(page=1, page_size=2):
+    # Se consulta a la API de Malware Bazaar los ultimos 5 malwares detectados
+    data = {
+        'query': 'get_recent',
+        'selector': 'time'
+    }
+    try:
+        response = requests.post('https://mb-api.abuse.ch/api/v1/', data=data)
+        response.raise_for_status()
+        return [{
+            'sha256': sample['sha256_hash'],
+            'file_type': sample['file_type'],
+            'signature': sample['signature'],
+            'tags': sample['tags'],
+            'first_seen': sample['first_seen'],
+            'file_name': sample['file_name']
+        } for sample in response.json()['data'][:5]]
+    except requests.RequestException as e:
+        print(f"Error al consultar CSIRT API: {e}")
+        return []
+
 def get_latest_cves():
     try:
         # Solicitud a la API de cve.circl.lu
@@ -103,13 +124,18 @@ def index():
     #  ultimas 10 vulnerabilidades
     latest_cves = get_latest_cves()
 
+    # Ultimas dos noticias de ciberseguridad
+    latest_malware = get_malware()
+
     return render_template('index.html',
                            top_clients=top_clients,
                            top_incident_types=top_incident_types,
                            top_employees=top_employees,
                            latest_cves=latest_cves,
+                           latest_malware= latest_malware,
                            top_x=top_x,
                            show_employees=show_employees)
 
 if __name__ == '__main__':
+    csirt_news = get_csirt_news()
     app.run(debug=True)
