@@ -53,51 +53,51 @@ def get_malware(page=1, page_size=2):
         print(f"Error al consultar CSIRT API: {e}")
         return []
 
+from requests import get
+
 def get_latest_cves():
     try:
-        # Solicitud a la API de cve.circl.lu
         response = get('https://cve.circl.lu/api/last', timeout=5)
-        response.raise_for_status()  # lanza excepción si la solicitud falla
+        response.raise_for_status()
         cves = response.json()
 
         vulnerabilities = []
-        for cve in cves[:10]:  # ultimas 10 vulnerabilidades
-            # Extraer campos anidados
-            cve_id = cve.get('cveMetadata', {}).get('cveId', 'N/A')
+        count = 0
+        index = 0
 
-            # Descripción
+        while count < 10 and index < len(cves):
+            cve = cves[index]
+            index += 1
+
+            # Validar que sea un registro CVE válido
+            if cve.get('dataType') != 'CVE_RECORD' or 'cveMetadata' not in cve:
+                continue
+
+            cve_id = cve.get('cveMetadata', {}).get('cveId', 'N/A')
             description = 'Sin descripción'
             descriptions = cve.get('containers', {}).get('cna', {}).get('descriptions', [])
-            if descriptions and isinstance(descriptions, list) and len(descriptions) > 0:
+
+            if isinstance(descriptions, list) and descriptions:
                 description = descriptions[0].get('value', 'Sin descripción')
 
-            # Fecha de publicacion y actualizacion
             published_date = cve.get('cveMetadata', {}).get('datePublished', 'N/A')
             updated_date = cve.get('cveMetadata', {}).get('dateUpdated', 'N/A')
-
-            # Puntaje CVE
-            cve_score = 'N/A'
-            metrics = cve.get('containers', {}).get('cna', {}).get('metrics', [])
-            if metrics and isinstance(metrics, list) and len(metrics) > 0:
-                cvss_v3_1 = metrics[0].get('cvssV3_1', {})
-                cve_score = cvss_v3_1.get('baseScore', 'N/A')
-            else:
-                # Si no está en cna, buscar en containers.adp
-                adp_list = cve.get('containers', {}).get('adp', [])
-                for adp in adp_list:
-                    metrics = adp.get('metrics', [])
-                    if metrics and isinstance(metrics, list) and len(metrics) > 0:
-                        cvss_v3_1 = metrics[0].get('cvssV3_1', {})
-                        cve_score = cvss_v3_1.get('baseScore', 'N/A')
-                        break  # Salir del bucle una vez que se encuentra la puntuac
 
             vulnerabilities.append({
                 'cve_id': cve_id,
                 'description': description,
                 'published_date': published_date,
                 'updated_date': updated_date,
-                'cve_score': cve_score
             })
+
+            count += 1
+
+        return vulnerabilities
+
+    except Exception as e:
+        print(f"Error al obtener los CVEs: {e}")
+        return []
+
 
         return vulnerabilities
     except RequestException as e:
@@ -187,7 +187,7 @@ def index():
         pdf.cell(0, 10, 'Últimas Vulnerabilidades', 0, 1)
         pdf.set_font('Arial', '', 10)
         for cve in latest_cves:
-            text = f"- {cve['cve_id']} ({cve['published_date']}) - Score: {cve['cve_score']}\nDescription: {cve['description']}"
+            text = f"- {cve['cve_id']} ({cve['published_date']}) \nDescription: {cve['description']}"
             sanitized_text = text.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 6, sanitized_text)
             pdf.ln(3)

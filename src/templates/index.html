@@ -46,7 +46,7 @@
         <th>Descripción</th>
         <th>Fecha de Publicación</th>
         <th>Fecha de Actualización</th>
-        <th>Puntaje CVE</th>
+
     </tr>
     {% for cve in latest_cves %}
     <tr>
@@ -54,7 +54,7 @@
         <td>{{ cve['description'] | truncate(100) }}</td>
         <td>{{ cve['published_date'] }}</td>
         <td>{{ cve['updated_date'] }}</td>
-        <td>{{ cve['cve_score'] }}</td>
+
     </tr>
     {% endfor %}
 </table>
