@@ -53,7 +53,6 @@ def get_malware(page=1, page_size=2):
         print(f"Error al consultar CSIRT API: {e}")
         return []
 
-from requests import get
 
 def get_latest_cves():
     try:
@@ -150,6 +149,11 @@ def index():
     # Ultimas dos noticias de ciberseguridad
     latest_malware = get_malware()
 
+    file_type_count = {}
+    for m in latest_malware:
+        ft = m.get('file_type','Unknown')
+        file_type_count[ft] = file_type_count.get(ft,0) + 1
+
     if 'generate_pdf' in request.form:
         # Crear PDF
         # Instantiation of inherited class
@@ -187,7 +191,7 @@ def index():
         pdf.cell(0, 10, 'Últimas Vulnerabilidades', 0, 1)
         pdf.set_font('Arial', '', 10)
         for cve in latest_cves:
-            text = f"- {cve['cve_id']} ({cve['published_date']}) \nDescription: {cve['description']}"
+            text = f"- {cve['cve_id']} ({cve['published_date']}) - Score: {cve['cve_score']}\nDescription: {cve['description']}"
             sanitized_text = text.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 6, sanitized_text)
             pdf.ln(3)
@@ -232,8 +236,10 @@ def index():
                            top_employees=top_employees,
                            latest_cves=latest_cves,
                            latest_malware= latest_malware,
+                           file_type_count=file_type_count,
                            top_x=top_x,
                            show_employees=show_employees)
 
 if __name__ == '__main__':
+
     app.run(debug=True)
