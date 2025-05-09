@@ -1,0 +1,21 @@
+<!-- templates/resultado.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resultado del Análisis</title>
+</head>
+<body>
+<h1>Resultado del Análisis</h1>
+
+<p>Clasificación: <strong>{{ "CRÍTICO" if es_critico else "NO CRÍTICO" }}</strong></p>
+{% if metodo == 'regresion' and grafico %}
+<h2>Gráfico de Regresión Lineal</h2>
+<img src="data:image/png;base64,{{ grafico }}" alt="Gráfico de Regresión">
+{% elif metodo == 'arbol_decision' and arbol_img %}
+<h2>Árbol de Decisión</h2>
+<img src="{{ url_for('static', filename=arbol_img.split('/')[-1]) }}" alt="Árbol de Decisión">
+{% endif %}
+
+<a href="/prediccion_criticidad">Nuevo análisis</a>
+</body>
+</html>
