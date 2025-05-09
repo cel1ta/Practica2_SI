@@ -12,22 +12,15 @@ app = Flask(__name__)
 
 class PDF(FPDF):
     def header(self):
-        # Arial bold 15
         self.set_font('Arial', 'B', 15)
-        # Move to the right
         self.cell(80)
-        # Title
         self.cell(30, 10, 'Informe del Cuadro de Mando Integral', 0, 0, 'C')
-        # Line break
         self.ln(20)
 
     # Page footer
     def footer(self):
-        # Position at 1.5 cm from bottom
         self.set_y(-15)
-        # Arial italic 8
         self.set_font('Arial', 'I', 8)
-        # Page number
         self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
 
 def get_db_connection():
@@ -242,7 +235,7 @@ def index():
                            file_type_count=file_type_count,
                            top_x=top_x,
                            show_employees=show_employees)
-    @app.route('/prediccion_criticidad', methods=['GET', 'POST'])
+@app.route('/prediccion_criticidad', methods=['GET', 'POST'])
 def analizar_ticket():
     if request.method == 'POST':
         try:
@@ -256,7 +249,6 @@ def analizar_ticket():
                 'tipo_incidencia': int(request.form['tipo_incidencia'])
             }
 
-            # Calcular días de resolución
             dias_resolucion = (datos_form['fecha_cierre'] - datos_form['fecha_apertura']).days
             nuevo_ticket = pd.DataFrame([{
                 'dias_resolucion': dias_resolucion,
@@ -270,10 +262,9 @@ def analizar_ticket():
             if df.empty:
                 raise ValueError("No hay datos históricos para entrenar el modelo")
 
-            # Obtener método seleccionado
             metodo = request.form['metodo']
 
-            # Entrenar modelo según método seleccionado
+            # Entrenar modelo 
             if metodo == 'regresion':
                 modelo = entrenar_modelo_regresion(df)
                 prediccion = modelo.predict(nuevo_ticket)[0]
@@ -299,7 +290,6 @@ def analizar_ticket():
             print(f"Error en el proceso: {e}")
             return render_template('error.html', mensaje=str(e))
 
-    # GET: Mostrar formulario
     try:
         conn = get_db_connection()
         clientes = conn.execute('SELECT DISTINCT cliente FROM Tickets').fetchall()
