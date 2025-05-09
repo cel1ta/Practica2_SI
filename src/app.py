@@ -4,6 +4,9 @@ import sqlite3
 from requests import get, RequestException
 from fpdf import FPDF
 import io
+from ejer5 import entrenar_modelo_regresion, obtener_datos_entrenamiento, entrenar_modelo_arbol_decision, visualizar_arbol_decision, generar_grafico_regresion
+from datetime import datetime
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -239,7 +242,72 @@ def index():
                            file_type_count=file_type_count,
                            top_x=top_x,
                            show_employees=show_employees)
+    @app.route('/prediccion_criticidad', methods=['GET', 'POST'])
+def analizar_ticket():
+    if request.method == 'POST':
+        try:
+            # Procesar datos del formulario
+            datos_form = {
+                'cliente': int(request.form['cliente']),
+                'fecha_apertura': datetime.fromisoformat(request.form['fecha_apertura']),
+                'fecha_cierre': datetime.fromisoformat(request.form['fecha_cierre']),
+                'es_mantenimiento': request.form['es_mantenimiento'] == 'true',
+                'satisfaccion_cliente': int(request.form['satisfaccion_cliente']),
+                'tipo_incidencia': int(request.form['tipo_incidencia'])
+            }
 
+            # Calcular días de resolución
+            dias_resolucion = (datos_form['fecha_cierre'] - datos_form['fecha_apertura']).days
+            nuevo_ticket = pd.DataFrame([{
+                'dias_resolucion': dias_resolucion,
+                'es_mantenimiento': int(datos_form['es_mantenimiento']),
+                'satisfaccion_cliente': datos_form['satisfaccion_cliente'],
+                'tipo_incidencia': datos_form['tipo_incidencia']
+            }])
+
+            # Obtener y preparar datos
+            df = obtener_datos_entrenamiento()
+            if df.empty:
+                raise ValueError("No hay datos históricos para entrenar el modelo")
+
+            # Obtener método seleccionado
+            metodo = request.form['metodo']
+
+            # Entrenar modelo según método seleccionado
+            if metodo == 'regresion':
+                modelo = entrenar_modelo_regresion(df)
+                prediccion = modelo.predict(nuevo_ticket)[0]
+                es_critico = prediccion > 0.5
+                grafico = generar_grafico_regresion(modelo, df, nuevo_ticket.iloc[0], prediccion)
+                arbol_img = None
+
+            elif metodo == 'arbol_decision':
+                modelo = entrenar_modelo_arbol_decision(df)
+                prediccion = modelo.predict(nuevo_ticket)[0]
+                es_critico = bool(prediccion)
+                grafico = None
+                arbol_img = visualizar_arbol_decision(modelo)
+
+            return render_template('resultado.html',
+                                   es_critico=es_critico,
+                                   probabilidad=f"{prediccion:.2f}",
+                                   grafico=grafico,
+                                   metodo=metodo,
+                                   arbol_img=arbol_img)
+
+        except Exception as e:
+            print(f"Error en el proceso: {e}")
+            return render_template('error.html', mensaje=str(e))
+
+    # GET: Mostrar formulario
+    try:
+        conn = get_db_connection()
+        clientes = conn.execute('SELECT DISTINCT cliente FROM Tickets').fetchall()
+        conn.close()
+        return render_template('formulario.html', clientes=clientes)
+    except Exception as e:
+        return render_template('error.html', mensaje=f"Error accediendo a la base de datos: {e}")
+        
 if __name__ == '__main__':
 
     app.run(debug=True)
