@@ -1,0 +1,63 @@
+<!-- templates/formulario.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Registro de Ticket</title>
+  <style>
+    .form-group { margin-bottom: 15px; }
+    label { display: inline-block; width: 200px; }
+    input, select { width: 250px; }
+  </style>
+</head>
+<body>
+<h1>Nuevo Ticket</h1>
+<form method="POST"  action="/prediccion_criticidad">
+  <div class="form-group">
+    <label>Cliente:</label>
+    <select name="cliente" required>
+      {% for cliente in clientes %}
+      <option value="{{ cliente['cliente'] }}">Cliente {{ cliente['cliente'] }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>Fecha Apertura:</label>
+    <input type="date" name="fecha_apertura" required>
+  </div>
+
+  <div class="form-group">
+    <label>Fecha Cierre:</label>
+    <input type="date" name="fecha_cierre" required>
+  </div>
+
+  <div class="form-group">
+    <label>Es mantenimiento:</label>
+    <select name="es_mantenimiento" required>
+      <option value="false">No</option>
+      <option value="true">Sí</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>Satisfacción del Cliente (1-10):</label>
+    <input type="number" name="satisfaccion_cliente" min="1" max="10" required>
+  </div>
+
+  <div class="form-group">
+    <label>Tipo de Incidencia (Número):</label>
+    <input type="number" name="tipo_incidencia" required>
+  </div>
+
+  <!-- Añadir esto en formulario.html dentro del formulario -->
+  <div class="form-group">
+    <label>Método de Análisis:</label>
+    <select name="metodo" required>
+      <option value="regresion">Regresión Lineal</option>
+      <option value="arbol_decision">Árbol de Decisión</option>
+    </select>
+  </div>
+  <button type="submit">Analizar</button>
+</form>
+</body>
+</html>
