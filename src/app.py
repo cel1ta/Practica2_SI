@@ -187,7 +187,7 @@ def index():
         pdf.cell(0, 10, 'Últimas Vulnerabilidades', 0, 1)
         pdf.set_font('Arial', '', 10)
         for cve in latest_cves:
-            text = f"- {cve['cve_id']} ({cve['published_date']}) - Score: {cve['cve_score']}\nDescription: {cve['description']}"
+            text = f"- {cve['cve_id']} ({cve['published_date']}) \nDescription: {cve['description']}"
             sanitized_text = text.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 6, sanitized_text)
             pdf.ln(3)
