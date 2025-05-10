@@ -4,7 +4,7 @@ import sqlite3
 from requests import get, RequestException
 from fpdf import FPDF
 import io
-from ejer5 import entrenar_modelo_regresion, obtener_datos_entrenamiento, entrenar_modelo_arbol_decision, visualizar_arbol_decision, generar_grafico_regresion
+from ejer5 import entrenar_modelo_regresion, entrenar_modelo_arbol_decision, entrenar_modelo_random_forest, obtener_datos_entrenamiento, visualizar_arbol_decision, generar_grafico_regresion, generar_grafico_random_forest
 from datetime import datetime
 import pandas as pd
 
@@ -12,15 +12,22 @@ app = Flask(__name__)
 
 class PDF(FPDF):
     def header(self):
+        # Arial bold 15
         self.set_font('Arial', 'B', 15)
+        # Move to the right
         self.cell(80)
+        # Title
         self.cell(30, 10, 'Informe del Cuadro de Mando Integral', 0, 0, 'C')
+        # Line break
         self.ln(20)
 
     # Page footer
     def footer(self):
+        # Position at 1.5 cm from bottom
         self.set_y(-15)
+        # Arial italic 8
         self.set_font('Arial', 'I', 8)
+        # Page number
         self.cell(0, 10, 'Page ' + str(self.page_no()), 0, 0, 'C')
 
 def get_db_connection():
@@ -187,7 +194,7 @@ def index():
         pdf.cell(0, 10, 'Últimas Vulnerabilidades', 0, 1)
         pdf.set_font('Arial', '', 10)
         for cve in latest_cves:
-            text = f"- {cve['cve_id']} ({cve['published_date']}) \nDescription: {cve['description']}"
+            text = f"- {cve['cve_id']} ({cve['published_date']})\nDescription: {cve['description']}"
             sanitized_text = text.encode('latin-1', 'replace').decode('latin-1')
             pdf.multi_cell(0, 6, sanitized_text)
             pdf.ln(3)
@@ -249,6 +256,7 @@ def analizar_ticket():
                 'tipo_incidencia': int(request.form['tipo_incidencia'])
             }
 
+            # Calcular días de resolución
             dias_resolucion = (datos_form['fecha_cierre'] - datos_form['fecha_apertura']).days
             nuevo_ticket = pd.DataFrame([{
                 'dias_resolucion': dias_resolucion,
@@ -262,9 +270,10 @@ def analizar_ticket():
             if df.empty:
                 raise ValueError("No hay datos históricos para entrenar el modelo")
 
+            # Obtener método seleccionado
             metodo = request.form['metodo']
 
-            # Entrenar modelo 
+            # Entrenar modelo según método seleccionado
             if metodo == 'regresion':
                 modelo = entrenar_modelo_regresion(df)
                 prediccion = modelo.predict(nuevo_ticket)[0]
@@ -278,6 +287,12 @@ def analizar_ticket():
                 es_critico = bool(prediccion)
                 grafico = None
                 arbol_img = visualizar_arbol_decision(modelo)
+            elif metodo == 'random_forest':
+                modelo = entrenar_modelo_random_forest(df)
+                prediccion = modelo.predict(nuevo_ticket)[0]
+                es_critico = bool(prediccion)
+                grafico = generar_grafico_random_forest(modelo)
+                arbol_img = None
 
             return render_template('resultado.html',
                                    es_critico=es_critico,
@@ -290,6 +305,7 @@ def analizar_ticket():
             print(f"Error en el proceso: {e}")
             return render_template('error.html', mensaje=str(e))
 
+    # GET: Mostrar formulario
     try:
         conn = get_db_connection()
         clientes = conn.execute('SELECT DISTINCT cliente FROM Tickets').fetchall()
