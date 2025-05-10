@@ -24,8 +24,12 @@
     <div class="chart-container">
         <img src="{{ url_for('static', filename=(arbol_img|default('')).split('/')[-1]) }}" class="img-fluid" alt="Árbol de Decisión">
     </div>
+    {% elif metodo == 'random_forest' and grafico %}
+    <h2>Importancia de Características - Random Forest</h2>
+    <div class="chart-container">
+        <img src="data:image/png;base64,{{ grafico }}" class="img-fluid" alt="Gráfico de Random Forest">
+    </div>
     {% endif %}
-    
     <br>
     <a href="/" class="btn btn-primary mr-2">Inicio</a>
     <a href="/prediccion_criticidad" class="btn btn-primary mr-2">Nuevo análisis</a>
