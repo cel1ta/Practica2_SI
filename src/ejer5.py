@@ -1,5 +1,6 @@
 import os
 from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -180,3 +181,57 @@ def visualizar_arbol_decision(modelo, nombre_archivo='arbol_decision'):
         print(f"Error generando árbol: {e}")
         return None
 
+
+def entrenar_modelo_random_forest(df):
+    try:
+        if df.empty:
+            raise ValueError("No hay datos para entrenamiento")
+
+        preprocesador = ColumnTransformer(
+            transformers=[
+                ('num', StandardScaler(), ['dias_resolucion', 'satisfaccion_cliente']),
+                ('cat', OneHotEncoder(), ['tipo_incidencia', 'es_mantenimiento'])
+            ])
+
+        modelo = Pipeline(steps=[
+            ('preprocesador', preprocesador),
+            ('clasificador', RandomForestClassifier(n_estimators=100, random_state=42))
+        ])
+
+        X = df.drop('es_critico', axis=1)
+        y = df['es_critico']
+
+        modelo.fit(X, y)
+        return modelo
+
+    except Exception as e:
+        print(f"Error entrenando Random Forest: {e}")
+        return None
+
+
+
+def generar_grafico_random_forest(modelo):
+    try:
+        importances = modelo.named_steps['clasificador'].feature_importances_
+        feature_names = modelo.named_steps['preprocesador'].get_feature_names_out()
+
+        # Sort feature importances in descending order
+        indices = np.argsort(importances)[::-1]
+        sorted_feature_names = [feature_names[i] for i in indices]
+        sorted_importances = importances[indices]
+
+        plt.figure(figsize=(10, 6))
+        plt.barh(range(len(sorted_importances)), sorted_importances, align='center')
+        plt.yticks(range(len(sorted_importances)), sorted_feature_names)
+        plt.xlabel('Importancia')
+        plt.title('Importancia de Características - Random Forest')
+        plt.tight_layout()
+
+        buf = BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight')
+        buf.seek(0)
+        return base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    except Exception as e:
+        print(f"Error generando gráfico de Random Forest: {e}")
+        return None
