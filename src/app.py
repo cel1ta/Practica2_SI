@@ -72,27 +72,39 @@ def get_latest_cves():
             index += 1
 
             # Validar que sea un registro CVE válido
-            if cve.get('dataType') != 'CVE_RECORD' or 'cveMetadata' not in cve:
-                continue
+            if cve.get('dataType') == 'CVE_RECORD' or 'cveMetadata' in cve:
+                cve_id = cve.get('cveMetadata', {}).get('cveId', 'N/A')
+                description = 'Sin descripción'
+                descriptions = cve.get('containers', {}).get('cna', {}).get('descriptions', [])
+                if isinstance(descriptions, list) and descriptions:
+                    description = descriptions[0].get('value', 'Sin descripción')
 
-            cve_id = cve.get('cveMetadata', {}).get('cveId', 'N/A')
-            description = 'Sin descripción'
-            descriptions = cve.get('containers', {}).get('cna', {}).get('descriptions', [])
+                published_date = cve.get('cveMetadata', {}).get('datePublished', 'N/A')
+                updated_date = cve.get('cveMetadata', {}).get('dateUpdated', 'N/A')
 
-            if isinstance(descriptions, list) and descriptions:
-                description = descriptions[0].get('value', 'Sin descripción')
+                vulnerabilities.append({
+                    'cve_id': cve_id,
+                    'description': description,
+                    'published_date': published_date,
+                    'updated_date': updated_date,
+                })
+                count += 1
 
-            published_date = cve.get('cveMetadata', {}).get('datePublished', 'N/A')
-            updated_date = cve.get('cveMetadata', {}).get('dateUpdated', 'N/A')
+            elif 'id' in cve and 'aliases' in cve:
+                aliases = cve.get('aliases', [])
+                cve_id = aliases[0] if aliases and isinstance(aliases, list) and len(aliases) > 0 else cve.get('id', 'N/A')
 
-            vulnerabilities.append({
-                'cve_id': cve_id,
-                'description': description,
-                'published_date': published_date,
-                'updated_date': updated_date,
-            })
+                description = cve.get('details', 'Sin descripción')
+                published_date = cve.get('published', 'N/A')
+                updated_date = cve.get('modified', 'N/A')
 
-            count += 1
+                vulnerabilities.append(  {
+                    'cve_id': cve_id,
+                    'description': description,
+                    'published_date': published_date,
+                    'updated_date': updated_date,
+                })
+                count += 1
 
         return vulnerabilities
 
