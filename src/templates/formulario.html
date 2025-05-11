@@ -1,0 +1,90 @@
+<!-- templates/formulario.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro de Ticket</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-light text-dark">
+<div class="container mt-5">
+    <h1 class="mb-4">Nuevo Ticket</h1>
+    <form method="POST" action="/prediccion_criticidad" class="needs-validation" novalidate>
+        <div class="form-row">
+            <div class="form-group col-md-6">
+                <label for="cliente">Cliente</label>
+                <select name="cliente" id="cliente" class="form-control" required>
+                    <option value="" disabled selected>Seleccione...</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente['cliente'] }}">Cliente {{ cliente['cliente'] }}</option>
+                    {% endfor %}
+                </select>
+                <div class="invalid-feedback">Por favor, seleccione un cliente.</div>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="fecha_apertura">Fecha Apertura</label>
+                <input type="date" name="fecha_apertura" id="fecha_apertura" class="form-control" required>
+                <div class="invalid-feedback">Ingrese la fecha de apertura.</div>
+            </div>
+            <div class="form-group col-md-3">
+                <label for="fecha_cierre">Fecha Cierre</label>
+                <input type="date" name="fecha_cierre" id="fecha_cierre" class="form-control" required>
+                <div class="invalid-feedback">Ingrese la fecha de cierre.</div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-4">
+                <label for="es_mantenimiento">¿Es mantenimiento?</label>
+                <select name="es_mantenimiento" id="es_mantenimiento" class="form-control" required>
+                    <option value="false">No</option>
+                    <option value="true">Sí</option>
+                </select>
+                <div class="invalid-feedback">Seleccione una opción.</div>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="satisfaccion_cliente">Satisfacción (1-10)</label>
+                <input type="number" name="satisfaccion_cliente" id="satisfaccion_cliente" class="form-control" min="1" max="10" required>
+                <div class="invalid-feedback">Ingrese un valor entre 1 y 10.</div>
+            </div>
+            <div class="form-group col-md-4">
+                <label for="tipo_incidencia">Tipo de Incidencia (1-5)</label>
+                <input type="number" name="tipo_incidencia" id="tipo_incidencia" class="form-control" required>
+                <div class="invalid-feedback">Ingrese el tipo de incidencia.</div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="metodo">Método de Análisis</label>
+            <select name="metodo" id="metodo" class="form-control" required>
+                <option value="regresion">Regresión Lineal</option>
+                <option value="arbol_decision">Árbol de Decisión</option>
+                <option value="random_forest">Random Forest</option>
+            </select>
+            <div class="invalid-feedback">Seleccione un método.</div>
+        </div>
+        <button type="submit" class="btn btn-primary">Analizar</button>
+    </form>
+</div>
+
+<script>
+// Bootstrap form validation
+(function() {
+  'use strict';
+  window.addEventListener('load', function() {
+    var forms = document.getElementsByClassName('needs-validation');
+    Array.prototype.filter.call(forms, function(form) {
+      form.addEventListener('submit', function(event) {
+        if (form.checkValidity() === false) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  }, false);
+})();
+</script>
+
+

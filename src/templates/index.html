@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Cuadro de Mando Integral</title>
+    <!-- Bootstrap CSS para grid y estilos básicos -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light text-dark">
+<div class="container-fluid p-4">
+    <h1 class="mb-4">Cuadro de Mando Integral</h1>
+
+    <!-- Filtros -->
+    <form method="POST" class="form-inline mb-4">
+        <div class="form-group mr-3">
+            <label for="top_x" class="mr-2">Seleccionar Top X:</label>
+            <input type="number" id="top_x" name="top_x" class="form-control" value="{{ top_x }}" min="1">
+        </div>
+        <div class="form-group mr-3">
+            <input type="checkbox" id="show_employees" name="show_employees" class="form-check-input" {% if show_employees %}checked{% endif %}>
+            <label for="show_employees" class="form-check-label ml-1">Mostrar empleados</label>
+        </div>
+        <button type="submit" class="btn btn-primary mr-2">Actualizar</button>
+
+        <button type="button" onclick="window.location.href='/prediccion_criticidad'" class="btn btn-primary mr-2">Predicción de criticidad</button>
+
+        <button type="submit" name="generate_pdf" class="btn btn-secondary">Descargar PDF</button>
+    </form>
+
+    <!-- Gráficos en grid -->
+    <div class="row">
+        <!-- Clientes -->
+        <div class="col-md-6 mb-4">
+            <h2>Top {{ top_x }} Clientes</h2>
+            <div class="chart-container">
+                <canvas id="clientsChart"></canvas>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr><th>Cliente</th><th>Incidencias</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in top_clients %}
+                        <tr><td>{{ c.cliente }}</td><td>{{ c.incident_count }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tipos de Incidencias -->
+        <div class="col-md-6 mb-4">
+            <h2>Top {{ top_x }} Tipos de Incidencias</h2>
+            <div class="chart-container">
+                <canvas id="incidentTypesChart"></canvas>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr><th>Tipo</th><th>Promedio Días</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for t in top_incident_types %}
+                        <tr><td>{{ t.tipo_incidencia }}</td><td>{{ t.avg_resolution_days | round(2) }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if show_employees and top_employees %}
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <h2>Top {{ top_x }} Empleados</h2>
+            <div class="chart-container">
+                <canvas id="employeesChart"></canvas>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead><tr><th>Empleado</th><th>Tiempo (h)</th></tr></thead>
+                    <tbody>
+                        {% for e in top_employees %}
+                        <tr><td>{{ e.id_emp }}</td><td>{{ e.total_time | round(2) }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Vulnerabilidades -->
+    <h2>Últimas 10 Vulnerabilidades (Tiempo Real)</h2>
+    {% if latest_cves %}
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr><th>CVE ID</th><th>Descripción</th><th>Fecha Pub.</th><th>Fecha Act.</th></tr>
+            </thead>
+            <tbody>
+                {% for c in latest_cves %}
+                <tr>
+                    <td>{{ c.cve_id }}</td>
+                    <td>{{ c.description | truncate(200) }}</td>
+                    <td>{{ c.published_date[:10] }}</td>
+                    <td>{{ c.updated_date[:10] }}</td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}<p>No se pudieron obtener vulnerabilidades.</p>{% endif %}
+
+    <!-- Malware -->
+    <h2>Últimos Malwares Detectados</h2>
+    {% if latest_malware %}
+    <div class="table-responsive mb-4">
+        <table class="table table-striped table-bordered">
+            <thead>
+                <tr><th>SHA256</th><th>Archivo</th><th>Tipo</th><th>Firma</th><th>Etiquetas</th><th>1ª Detección</th></tr>
+            </thead>
+            <tbody>
+                {% for m in latest_malware %}
+                <tr>
+                    <td class="text-monospace small">{{ m.sha256 }}</td>
+                    <td>{{ m.file_name }}</td>
+                    <td>{{ m.file_type }}</td>
+                    <td>{{ m.signature }}</td>
+                    <td>{% if m.tags %}{{ m.tags | join(', ') }}{% else %}&mdash;{% endif %}</td>
+                    <td>{{ m.first_seen[:10] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <h2>Distribución por Tipo de Archivo</h2>
+    <div class="chart-container">
+        <canvas id="malwareDonut"></canvas>
+    </div>
+    {% else %}<p>No se pudieron obtener malwares.</p>{% endif %}
+</div>
+
+<script>
+function initCharts() {
+    const colors = ['#4e79a7','#f28e2b','#e15759','#76b7b2','#59a14f'];
+
+    // Clientes
+    new Chart(document.getElementById('clientsChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for c in top_clients %}'{{ c.cliente }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{ label: 'Incidencias', data: [{% for c in top_clients %}{{ c.incident_count }}{% if not loop.last %}, {% endif %}{% endfor %}], backgroundColor: colors[0] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Incidencias
+    new Chart(document.getElementById('incidentTypesChart'), {
+        type: 'line',
+        data: {
+            labels: [{% for t in top_incident_types %}'{{ t.tipo_incidencia }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{ label: 'Días Resolución', data: [{% for t in top_incident_types %}{{ t.avg_resolution_days | round(2) }}{% if not loop.last %}, {% endif %}{% endfor %}], borderColor: colors[1], fill: false, tension: 0.2 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // Empleados
+    {% if show_employees and top_employees %}
+    new Chart(document.getElementById('employeesChart'), {
+        type: 'bar',
+        data: {
+            labels: [{% for e in top_employees %}'{{ e.id_emp }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{ label: 'Horas', data: [{% for e in top_employees %}{{ e.total_time | round(2) }}{% if not loop.last %}, {% endif %}{% endfor %}], backgroundColor: colors[2] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+    {% endif %}
+
+    // Donut Malware
+    const counts = {{ file_type_count | tojson | safe }};
+    new Chart(document.getElementById('malwareDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(counts),
+            datasets: [{ data: Object.values(counts), backgroundColor: colors.slice(0, Object.keys(counts).length) }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '50%' }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initCharts);
+</script>
+</body>
+</html>
